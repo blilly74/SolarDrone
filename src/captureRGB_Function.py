@@ -7,21 +7,16 @@ import os
 picam2 = Picamera2()
 
 def initializeRGBCamera():
-    """
-    Configures and starts the camera.
-    """
     try:
         print("Initializing Pi Camera...")
-        # Create a configuration for still images
         config = picam2.create_still_configuration()
         picam2.configure(config)
-        picam2.start()
-        # Give the camera 2 seconds to warm up and adjust exposure
+        # Start without the preview window to avoid headless hangs
+        picam2.start(preview=None) 
         time.sleep(2.0)
         print("Camera initialized successfully.")
     except Exception as e:
         print(f"Error initializing camera: {e}")
-        print("Is the camera connected and 'picamera2' installed?")
 
 def getRGBFrame():
     """

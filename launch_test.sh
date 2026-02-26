@@ -1,6 +1,9 @@
 #!/bin/bash
 # MAVSDK_launch.sh
 
+# Give the OS time to initialize camera drivers
+sleep 10
+
 # 1. Navigate and activate environment
 cd /home/blilly/Desktop/SolarDrone
 source /home/blilly/venv/bin/activate
