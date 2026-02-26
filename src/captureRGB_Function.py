@@ -3,56 +3,43 @@ import numpy as np
 import subprocess
 import time
 
-# Global variable for consistency with your other modules
+# Create a placeholder for consistency, but do NOT call Picamera2()
 cap = None 
 
 def initializeRGBCamera():
-    """
-    Verifies Arducam OV5647 is ready via the libcamera stack.
-    """
+    """Verifies the Arducam is ready using the libcamera-apps stack."""
     print("Initializing Arducam OV5647 via libcamera-apps...")
     try:
-        # Check if rpicam-still (or libcamera-still) is available
-        result = subprocess.run(["rpicam-still", "--version"], capture_output=True, text=True)
-        if result.returncode == 0:
-            print("Arducam system ready.")
-            return True
-        return False
+        # Check if rpicam-still is available as per Arducam manual
+        subprocess.run(["rpicam-still", "--version"], capture_output=True, check=True)
+        print("Arducam system ready.")
+        return True
     except Exception as e:
-        print(f"Error: rpicam-still not found. Ensure libcamera-apps is installed: {e}")
+        print(f"Error: Arducam command not found. Ensure libcamera-apps is installed: {e}")
         return False
 
 def getRGBFrame():
-    """
-    Captures a frame using rpicam-still and streams it directly to stdout.
-    This bypasses the SD card and provides a BGR array for OpenCV.
-    """
-    # Parameters based on OV5647 Common Specs [cite: 13]
+    """Captures a frame to memory via stdout. No file is saved to SD."""
+    # Settings optimized for OV5647 5MP sensor
     command = [
         "rpicam-still",
         "--nopreview",
-        "--immediate",      # Minimal delay [cite: 59]
-        "--width", "640",   # Match your processImage resolution [cite: 13]
+        "--immediate",      # Captures immediately
+        "--width", "640",   # Match processing resolution
         "--height", "480",
-        "-t", "1",          # 1ms timeout
-        "-e", "jpg",        # Encode as JPG bytes
-        "-o", "-"           # Output to stdout (memory)
+        "-t", "1",          # Minimal delay
+        "-e", "jpg",        # JPG encoding
+        "-o", "-"           # Output to memory (stdout)
     ]
-    
     try:
-        # Run capture and grab the byte stream
         result = subprocess.run(command, capture_output=True, check=True)
-        image_bytes = result.stdout
-        
-        # Decode the byte stream into an OpenCV image
-        nparr = np.frombuffer(image_bytes, np.uint8)
+        # Decode the byte stream directly into an OpenCV array
+        nparr = np.frombuffer(result.stdout, np.uint8)
         frame = cv.imdecode(nparr, cv.IMREAD_COLOR)
-        
         return frame
     except Exception as e:
         print(f"Arducam capture failed: {e}")
         return None
 
 def closeRGBCamera():
-    """Consistency cleanup."""
     print("RGB Camera resources released.")
