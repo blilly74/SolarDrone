@@ -1,74 +1,58 @@
 import cv2 as cv
+import numpy as np
+import subprocess
 import time
-from picamera2 import Picamera2
-import os
 
-# --- Create a global camera object ---
-picam2 = Picamera2()
+# --- Global object for consistency ---
+cap = None 
 
 def initializeRGBCamera():
+    """
+    Arducam initialization. Since we use rpicam-still via subprocess,
+    we just verify the command is available.
+    """
+    print("Initializing Arducam via rpicam-still stdout...")
     try:
-        print("Initializing Pi Camera...")
-        config = picam2.create_still_configuration()
-        picam2.configure(config)
-        # Start without the preview window to avoid headless hangs
-        picam2.start(preview=None) 
-        time.sleep(2.0)
-        print("Camera initialized successfully.")
+        # Quick check if rpicam-still exists
+        subprocess.run(["rpicam-still", "--version"], capture_output=True, check=True)
+        print("Arducam system ready.")
+        return True
     except Exception as e:
-        print(f"Error initializing camera: {e}")
+        print(f"Error: rpicam-still not found or Arducam disconnected: {e}")
+        return False
 
 def getRGBFrame():
     """
-    Captures a single frame directly to memory as a NumPy array.
-    
-    Returns:
-        numpy.ndarray: The captured image in BGR format (for OpenCV).
-                       Returns None if capture fails.
+    Captures a frame using rpicam-still and streams it directly into a 
+    NumPy array via stdout. No file is saved to the SD card.
     """
+    command = [
+        "rpicam-still",
+        "--nopreview",
+        "--immediate",      # Capture as fast as possible
+        "--width", "640",   # Match your processImage resolution
+        "--height", "480",
+        "-t", "1",          # Minimal timeout
+        "-e", "jpg",        # Output as encoded jpg bytes
+        "-o", "-"           # "-" tells rpicam to output to stdout
+    ]
+    
     try:
-        # capture_array() gets the image as a NumPy array (in RGB format)
-        frameRGB = picam2.capture_array()
+        # Run command and capture the byte stream
+        result = subprocess.run(command, capture_output=True, check=True)
+        image_bytes = result.stdout
         
-        # OpenCV uses BGR format, so we must convert it
-        frameBGR = cv.cvtColor(frameRGB, cv.COLOR_RGB2BGR)
+        # Convert bytes to a NumPy array
+        nparr = np.frombuffer(image_bytes, np.uint8)
         
-        return frameBGR
+        # Decode the array into an OpenCV BGR image
+        frame = cv.imdecode(nparr, cv.IMREAD_COLOR)
         
+        return frame
     except Exception as e:
-        print(f"An error occurred while capturing the frame: {e}")
+        print(f"Capture error: {e}")
         return None
 
 def closeRGBCamera():
-    """
-    Stops and closes the camera.
-    Call this at the very end of main.py (in the 'finally' block).
-    """
-    try:
-        picam2.stop()
-        print("Camera stopped.")
-    except Exception as e:
-        print(f"Error stopping camera: {e}")
-
-# --- Main execution block (for testing) ---
-if __name__ == "__main__":
-    # This part only runs if you execute this file directly
-    print("--- Running camera test ---")
-    
-    initializeRGBCamera()
-    
-    frame = getRGBFrame()
-    
-    if frame is not None:
-        print(f"Frame captured successfully. Shape: {frame.shape}")
-        
-        # Save the image just to prove it worked
-        home_dir = os.path.expanduser('~')
-        save_path = os.path.join(home_dir, 'Desktop', 'test_RGB_capture.jpg')
-        
-        cv.imwrite(save_path, frame)
-        print(f"Test image saved as 'test_RGB_capture.jpg' on your Desktop.")
-    else:
-        print("Failed to capture test frame.")
-        
-    closeRGBCamera()
+    """Cleanup for code structure consistency."""
+    print("RGB Camera resources released.")
