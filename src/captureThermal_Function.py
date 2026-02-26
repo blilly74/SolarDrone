@@ -5,11 +5,13 @@ import time
 # --- Create a global camera object ---
 cap = None
 
-def initializeThermalCamera(device="/dev/v4l/by-id/usb-GroupGets_PureThermal__fw:v1.3.0__8005000e-5102-3133-3332-373300000000-video-index0"):
+def initializeThermalCamera(device=1): # Changed default to 1 for your setup
     global cap
     try:
+        # If an integer is passed, OpenCV uses it as the index
         print(f"Initializing Thermal Camera at: {device} ...")
 
+        # Explicitly use the index or string with the V4L2 backend
         cap = cv.VideoCapture(device, cv.CAP_V4L2)
 
         if not cap.isOpened():
@@ -17,11 +19,11 @@ def initializeThermalCamera(device="/dev/v4l/by-id/usb-GroupGets_PureThermal__fw
             cap = None
             return False
 
+        # Essential for PureThermal 3 UYVY format
         cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('U','Y','V','Y'))
         time.sleep(1)
         print("Thermal camera initialized successfully.")
         return True
-
     except Exception as e:
         print(f"Error initializing thermal camera: {e}")
         if cap:
