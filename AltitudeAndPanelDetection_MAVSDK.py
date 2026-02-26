@@ -40,7 +40,7 @@ async def main():
 
     print("Initializing Thermal Camera...")
     # UPDATED: Changed to video-index1 based on your v4l-id logs
-    initializeThermalCamera(cameraIndex=1)
+    initializeThermalCamera(1)
     await asyncio.sleep(2)
 
     # Initialize MAVSDK System
