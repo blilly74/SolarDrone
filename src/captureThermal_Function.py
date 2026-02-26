@@ -5,7 +5,7 @@ import time
 # --- Create a global camera object ---
 cap = None
 
-def initializeThermalCamera(device=1): # Changed default to 1 for your setup
+def initializeThermalCamera(device=0): # Changed default to 1 for your setup
     global cap
     try:
         # If an integer is passed, OpenCV uses it as the index
