@@ -41,7 +41,7 @@ async def main():
     print("Initializing Thermal Camera...")
     # UPDATED: Changed to video-index1 based on your v4l-id logs
     thermal_device_id = "/dev/v4l/by-id/usb-GroupGets_PureThermal__fw:v1.3.0__8005000e-5102-3133-3332-373300000000-video-index1"
-    initializeThermalCamera(thermal_device_id)
+    initializeThermalCamera(cameraIndex=1)
     await asyncio.sleep(1)
 
     # Initialize MAVSDK System
