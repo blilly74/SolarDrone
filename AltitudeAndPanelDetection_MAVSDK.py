@@ -14,7 +14,8 @@ from src.findOriginFromContour_Function import findOriginFromContour
 
 # --- Configuration ---
 # MAVSDK uses a URL-style connection string
-connectionString = "serial:///dev/ttyACM0:115200"
+# UPDATED: Use ttyAMA0 for GPIO/Telem2 or ttyACM0 for USB
+connectionString = "serial:///dev/ttyACM0:115200" 
 savePath = "/home/blilly/Desktop/Mission_Data/AltitudeAndPanelDetection_Test"
 
 startAltitude = 2
@@ -32,9 +33,16 @@ def rotate(img):
 async def main():
     os.makedirs(savePath, exist_ok=True)
 
-    # Hardware Init
+    # --- Hardware Initialization with Stabilization Delays ---
+    print("Initializing RGB Camera...")
     initializeRGBCamera()
-    initializeThermalCamera("/dev/v4l/by-id/usb-GroupGets_PureThermal__fw:v1.3.0__8005000e-5102-3133-3332-373300000000-video-index0")
+    await asyncio.sleep(2)  # Give the Pi 2 seconds to stabilize the USB bus
+
+    print("Initializing Thermal Camera...")
+    # UPDATED: Changed to video-index1 based on your v4l-id logs
+    thermal_device_id = "/dev/v4l/by-id/usb-GroupGets_PureThermal__fw:v1.3.0__8005000e-5102-3133-3332-373300000000-video-index1"
+    initializeThermalCamera(thermal_device_id)
+    await asyncio.sleep(1)
 
     # Initialize MAVSDK System
     drone = System()
@@ -104,7 +112,12 @@ async def main():
                     cv.imwrite(os.path.join(savePath, f"RGB_success_{attempt}.jpg"), final_img)
                     
                     # Log and break out to RTL
-                    mission_log.append({"timestamp": time.strftime("%H:%M:%S"), "result": "SUCCESS", "score": score})
+                    mission_log.append({
+                        "timestamp": time.strftime("%H:%M:%S"), 
+                        "altitude": currentAlt,
+                        "result": "SUCCESS", 
+                        "score": score
+                    })
                     return # Exits main() to finally block
 
                 await asyncio.sleep(0.05) # Yield to event loop
@@ -116,7 +129,8 @@ async def main():
             if attempt < maxAttempts:
                 currentAlt += altitudeIncrease
                 print(f"Increasing altitude to {currentAlt}m")
-                await drone.action.goto_location(0, 0, currentAlt, 0) # Simple altitude change
+                # Using simple takeoff logic for altitude steps
+                await drone.action.goto_location(0, 0, currentAlt, 0) 
 
     except Exception as e:
         print(f"Error during test execution: {e}")
@@ -142,5 +156,4 @@ async def main():
         print(f"Mission data saved to {savePath}.")
 
 if __name__ == "__main__":
-    # Start the asynchronous event loop
     asyncio.run(main())
